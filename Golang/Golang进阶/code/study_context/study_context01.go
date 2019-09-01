@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-const key = "key"
+var key = "key"
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -15,7 +15,6 @@ func main() {
 	go playGame(valueCtx)
 	time.Sleep(10 * time.Second)
 	cancel()
-
 	time.Sleep(5 * time.Second)
 }
 
