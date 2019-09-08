@@ -246,6 +246,39 @@ HTTP 状态码分为如下 5 大类：
 |504|Gateway Time-out|充当网关或代理服务器，未及时从远端服务器获取请求|
 |505|HTTP Version not supported|服务器不支持请求的 HTTP 协议的版本，无法完成处理|
 
+
+### HTTP 之 Cookie
+
+Cookie 是由服务器段生成，发送给用户的浏览器，浏览器会将 Cookie 的 key/value 保存到某目录的文件中，下一次请求同一网站就发送该 Cookie 给服务器。
+
+由于 HTTP 是无状态的，而服务器的业务必须是有状态的。Cookie 的诞生的最初目的是为了存储 web 服务器产生的状态信息，以便服务器使用。
+
+Cookie 的处理分为：
+
++ 服务器端向客户端发送 Cookie。
++ 浏览器将 Cookie 保存。
++ 之后每一次请求将 Cookie 发送给服务器端。
+
+服务器端向客户端发送的 Cookie 是通过 http 报文的实现的，在 `Set-Cookie` 中设置需要向服务器发送的 Cookie。
+
+Cookie 的格式如下：
+
++ name 是一个唯一确定 Cookie 名称。通常来讲 cookie 的名称是不去分大小写的。
+
++ value 存储 cookie 中的字符串的值，name 和 value 需要进行 url 编码。
+
++ domain cookie对于哪一个域是有效的。所有向该域发出的请求都会包含这个 Cookie 信息。这个值可以包含多个子域（如：map.baidu.com)，也可以不包含它们（如：.baidu.com ，则对 baidu.com 的所有子域有效。
+
++ path 表示这个 Cookie 影响的路径，浏览器会记住这个配置，向指定的域名中的路径发送 Cookie。
+
++ expires 失效时间，表示 Cookie 何时应该被删除的时间戳（也就是，何时停止向浏览器发送这个 Cookie）。如果不设置这个时间戳，浏览器在关闭这个页面之后会删除这个 Cookie；不过也可以自己设置删除时间。这个值是 GMT 格式，如果客户端和服务器端时间不一致，使用 expries 就会存在偏差。
+
++ max-age 与 expries 作用相同，要高速浏览器此 Cookie 多久过期（单位是秒），而不是一个固定的时间点。正常情况下，max-age 的优先级高于 expries。
+
++ HttpOnly 告知浏览器不能通过脚本 document.cookie 更改这个值。也不可见。
+
++ secure 安全标识，指定后，只有在使用 SSL 链接的时候才能发送到服务器，如果是 http 链接则不会传递信息。就算设置了 secure 属性页并不能代表其他人看不到机器保存的 cookie 信息，所以不要把重要信息放在 Cookie 中就对了。这个属性依然在服务器端设置。
+
 ### HTTP 2.0 的新特性
 
 HTPP 2.0 相比于 HTTP 1.1 版本。它多出来了下面三个主要的新特性。
