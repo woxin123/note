@@ -131,3 +131,47 @@ Executoor 框架的主要成员：`ThreadPoolExecutor`、`ScheduledThreadPoolExe
     ```
 
     前面我们讲过，当我们把一个 Callable 对象（比如上面的 Callable1 或 Callable2）提交给 ThreadPoolExecutor 执行时， submit(...)会向我们返回一个 FutureTask 对象。我们可以执行 FutureTask.get() 将返回该任务的结果。例如，如果提交的是对象 Callable1，FutureTask.get() 方法将返回 null；如果提交的是对象 Callable2，FutureTask.get() 方法将返回 result 对象。
+
+### ThreadPoolExecutor 详解
+
+Executor 框架最核心的类是 ThreadPoolExecutor，它是线程池的实现类，主要由下面的 4 个组件构成。
+
++ corePool: 核心线程池大小。
++ maximumPool: 最大线程池大小。
++ BlockingQueue: 用来暂时保存任务的工作队列。
++ RejectedExecutionHandler: 当 ThreadPoolExecutor 已经关闭或 ThreadPoolEXecutor 已经饱和时（达到了最大线程池大小且工作队列已满），execute() 方法将要调用的 Handler。
+
+通过 Executor 框架的工具类 Executors，可以创建 3 中类型的 ThreadPoolExecutor。
+
++ FixedThreadPool。
++ SingleThreadExecutor。
++ CachedThreadPool。
+
+#### 1. FixedThreadPool 详解
+
+FixedThreadPool 被称为可重用固定线程数量的线程池。下面是 FixedThreadPool 的源码实现。
+
+```java
+public static ExecutorService newFixedThreadPool(int nThread) {
+    return new ThreadPoolExecutor(nThreads, nThreads, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
+}
+```
+
+FixedThreadPool 的 corePoolSize 和 maximumPoolSize 都被设置为创建 FixedThreadPool 时指定的参数 nThreads。
+
+当线程池中的线程数大于 corePoolSize 时，keepAliveTime 为多余的空闲线程等待新任务的最长时间，超过这个时间后多余的线程将被终止。这里把 keepAvliveTime 设置为 0L，意味着多余的空闲线程会被立即终止。
+
+FixedThreadPool 的 execute() 方法的运行示意图如下图所示：
+
+![](http://img.mcwebsite.top/20190910234904.png)
+
+1. 如果当前运行的线程数少于 corePoolSize，则创建新的线程来执行任务。
+2. 当线程池完成预热之后（当前运行的线程数等于 corePoolSize），将任务加载到 LinkedBlockingQueue。
+3. 线程执行完 1 中的任务后，会在循环中反复 LinkedBlockingQueue 获取任务来执行。
+
+FixedThreadPool 使用无界队列 LinkedBlockingQueue 作为线程池的工作队列（队列的容量为 Integer,NAX_VALUE）。使用无界队列作为工作队列会对线程池带来如下影响。
+
+1. 当线程池中的数量达到 corePoolSize 后，新任务将在无界队列中等待，因此线程池中的线程数不会超过 corePoolSize。
+2. 由于 1，使用无界队列时 maximumPoolSize 将是一个无效的参数。
+3. 由于 1 和 2，使用无界队列是 keepAliveTime 将时一个无效参数。
+4. 由于使用无界队列，运行中的 FixedThreadPool（未执行 shutdown() 或 shutdownNow()）不会拒绝任务（不会调用 RejectedExecutionHandler.rejectedExecution 方法）。
