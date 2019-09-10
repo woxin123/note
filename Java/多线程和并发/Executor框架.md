@@ -30,4 +30,104 @@ Executor 框架的使用示意图如下图：
 
 ![](http://img.mcwebsite.top/20190903135231.png)
 
-主线程首先要创建实现的 Runnable 或者 Callable 接口的任务对象。工具类 Executors 可以把一个 Runnable 对象封装为一个 Callable 对象
+主线程首先要创建实现的 Runnable 或者 Callable 接口的任务对象。工具类 Executors 可以把一个 Runnable 对象封装为一个 Callable 对象（`Executors.callable(Runnable task)` 或 `Executors.callable(Runnable, Object resule)`）。
+
+然后可以把 `Runnable` 对象直接交给 `ExecutorService` 执行（`ExecutorService.execute(Runnable command)`）；或者可以把 `Runnable` 对象或者 `Callable` 对象交给 `ExecutorService` 执行 （`ExecutorService.submit(Runnable task)` 或 `ExecutorService.submit(Callable<T> task`）。
+
+如果执行 `ExecutorService.submit(...)`，ExecutorService 将返回一个实现 Future 接口的对象（到目前为止的 JDK 中，返回的仍然是 FutureTask 对象）。由于 FutureTask 实现了 Runnable，最后程序员也可以创建 FutureTask，然后直接交给 ExecutorService 执行。
+
+最后，主线程可以执行 `FutureTask.get()` 方法来等待任务的执行完成。主线程也可以执行 `FutureTask.cancle(boolean mayInterruptIfRunning)` 来取消此任务。
+
+#### Executor 框架的成员
+
+Executoor 框架的主要成员：`ThreadPoolExecutor`、`ScheduledThreadPoolExecutor`、`Future` 接口、`Runnable` 接口、`Callable` 接口和 `Executors`。
+
+1. `ThreadPoolExecutor`
+
+    `ThreadPoolExecutor` 通常使用工厂类 `Executors` 来创建。`Executors` 可以创建 3 种类型的 `ThreadPoolExecutor` : `SingleThreadExecutor`、`FixedThreadPool` 和 `CachedThreadPool`。
+
+    1. `FixedThreadPool`。下面是 `Executors` 提供的，创建使用固定线程数的 `FixedThreadPool` 的 API。
+
+    ```java
+    public static ExecutorService newFixedThreadPool(int nThreads);
+    public static ExecutorService newFixedThreadPool(int nThreads, ThreadFactory threadFactory);
+    ```
+    
+    `FixedThreadPool` 使用于为了满足资源管理的需求，而需要限制当前线程数量的应用场景，它适用于负载比较重的服务器。
+
+    2. `SingletonThreadExecutor`。下面是 `Executors` 提供的，创建使用单个线程的 `SingletonThreadExecutor` 的 API。
+
+    ```java
+    public static ExecutorService newSingleThreadExecutor()；
+    public static ExecutorService newSingleThreadExecutor(ThreadFactory threadFactory);
+    ```
+
+    SingleThreadExecutor 适用于需要保证顺序地执行各个任务，并且在任意的时间点，不会有多个线程是活动线程。
+
+    3. CachedThreadPool。下面是 Executors 提供的，创建一个会根据需要创建新线程的 `CachedThreadPool` 的 API。
+
+    ```java
+    public static ExecutorService newCachedThreadPool();
+    public static ExecutorService newCahcedThreadPool(ThreadFactory threadFactory);
+    ```
+
+    CachedThreadPool 是大小无界的线程池，适用于执行很多短期的异步任务，或者负责较轻的服务器。
+
+2. ScheduleThreadPoolExecutor
+
+    ScheduleThreadPoolExecutor 通常使用工厂类 Executors 来创建。Executors 可以创建两种类型的 ScheudledThreadPoolExecutor，如下：
+
+    + ScheudledThreadPoolExecutor。包含若干线程的 ScheudledThreadPoolExecutor。
+    + SingleThreadScheudledExecutor。只包含一个线程的 ScheudleThreadPoolExecutor。
+
+    下面分别介绍这两种 ScheduledThreadPoolExecutor。
+
+    下面是工厂类 Executors 提供的，创建固定数量的 ScheudleThreadPoolExecutor 的 API。
+
+    ```java
+    public static ScheudleExecutorService newScheduledThreadPool(int corePoolSize);
+    public static SechudleExecutorService newScheduledThreadPool(int corePoolSize, ThreadFactory threadFactory);
+    ```
+
+    ScheudledThreadPoolExecutor 适用于需要多个后台线程执行周期任务，同时为了满足资源管理的需求而需要限制后台线程数量的应用场景。下面是 Executors 提供的，创建单个线程的 SingleScheduleThreadPoolExecutor 的 API。
+
+    ```java
+    public static ScheduledExecutorService newSingleThreadScheduledExecutor();
+    public static ScheduledExecutorService newSingleThreadScheduledExecutor(ThreadFactory threadFactory);
+    ```
+
+    SingleThreadScheduledExecutor 适用于需要单个后台线程执行周期任务，同时需要保证顺序地执行各个任务的应用场景。
+
+3. Future 接口
+
+    Future 接口和实现 Future 接口的 FutureTask 类用来表示异步计算的结果。当我们把 Runnable 接口或 Callable 接口的实现类提交 (submit) 给 ThreadPoolExecutor 或 ScheduledThreadPoolExecutor 时，ThreadPoolExecutor 或 ScheduledThreadPoolExecutor 会想我们返回一个 FutureTask 对象。下面是对应的 API。
+
+    ```java
+    <T> Future<T> submit(Callable<T> task);
+    <T> Future<T> submit(Runnable task, T result);
+    Future<?> submit(Runnable task);
+    ```
+
+    有一点需要注意，截至到 jdk 8 为止，Java 通过上述 API 返回的是一个实现了 Future 接口的对象。在将来的 JDK 实现中，返回的可能就不是 FutureTask 。
+
+4. Runnable 接口和 Callable 接口
+
+    Runnable 接口和 Callable 的实现类，都可以被 ThreadPoolExecutor 或 ScheduledThreadPoolExecutor 执行。它们的区别是 Runnbale 不会返回结果，而 Callable 可以返回结果。
+
+    除了可以自己创建实现 Callable 接口的对象外，还可以使用工厂类 Executors 来把一个 Runnable 包装成一个 Callable。
+    
+    下面是 Executors 提供的，把一个 Runnable 包装成 Callable 的 API。
+
+    下面是 Executor 提供的，把一个 Runnable 包装成 Callable 的 API。
+
+    ```java
+    public static Callable<Object> callable(Runnable task); // 假设返回对象 Callable1
+    ```
+
+    下面是 Executors 提供的，把一个 Runnable 和一个待返回的结果包装成一个 Callable 的 API。
+
+    ```java
+    public static <T> Callable<T> callable(Runnable task, T result); // 假设返回对象 Callable2
+    ```
+
+    前面我们讲过，当我们把一个 Callable 对象（比如上面的 Callable1 或 Callable2）提交给 ThreadPoolExecutor 执行时， submit(...)会向我们返回一个 FutureTask 对象。我们可以执行 FutureTask.get() 将返回该任务的结果。例如，如果提交的是对象 Callable1，FutureTask.get() 方法将返回 null；如果提交的是对象 Callable2，FutureTask.get() 方法将返回 result 对象。
