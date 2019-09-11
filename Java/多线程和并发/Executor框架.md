@@ -214,3 +214,68 @@ FixedThreadPool 和 SingleThreadExecutor 使用无界队列 LinkedBlockingQueue 
 CachedThreadPool 的 execute() 方法的执行示意图如下图所示：
 
 ![](http://img.mcwebsite.top/20190911140506.png)
+
+1. 首先执行 SynchronousQueue.offer(Runnable task)。如果当前 maximumPool 中有空闲的线程正在执行 SynchronousQueue.poll(keepAliveTime, TimeUnit.NANOSECONDS)，那么主线程执行 offer 操作与空闲线程执行的 poll 操作匹配成功，主线程把任务交给空闲线程执行， execute() 方法执行完成，否则执行下面的步骤 2 。
+
+2. 当初始 maximumPool 为空，或者 maximumPool 中当前没有空闲线程时，将没有线程执行 SynchronousQueue.poll(keepAliveTime, TimeUnit.NANOSECONDS)。这种情况下，步骤 1 将失败。此时 CachedThreadPool 会创建一个新线程执行任务，execute() 方法执行完成。
+
+3. 在步骤 2 中创建的线程将任务执行完成后，会执行 SynchronousQueue.poll(keepAliveTime, TimeUnit.NANOSECONDS)。这个 poll 操作会让线程最多在 SynchronousQueue 中等待 60 秒。如果 60 秒内主线程提交了一个新任务（主线程执行步骤 1 ），那么这个空闲线程将执行主线程提交的新任务；否则，这个空闲线程将终止。由于空闲 60 秒的空闲线程会被终止，因此长时间保持空闲的 ChachedThreadPool 不会使用任何资源。
+
+前面提到过，SynchronousQueue 时一个没有容量的阻塞队列，每个插入操作必须等待另一个线程的对应操作移除操作，反之亦然。CachedThread 使用 SynchronousQueue，把主线程提交的任务传递给空闲线程执行。CachedThreadPool 中执行任务的示意图：
+
+![](http://img.mcwebsite.top/20190911182352.png)
+
+## ScheduledThreadPoolExecutor 详解
+
+ScheduledThreadPoolExecutor 继承自 ThreadPoolExecutor。它主要用来在给定的延迟之后运行任务，或者定期执行任务。ScheduledThreadPoolExecutor 的功能与 Timer 类似，但 ScheduledThreadPoolExecutor 可以在构造函数中指定多个对应的后台线程数。
+
+### ScheduledThreadPoolExecutor 的运行机制
+
+ScheduledThreadPoolExecutor 的执行示意图如下图：
+
+![](http://img.mcwebsite.top/20190911212009.png)
+
+ScheduledThreadPoolExecutor 为了实现周期性任务，对 ThreadPoolExecutor 做了如下改变。
+
+1. 使用 DelayQueue 作为任务队列。
+2. 获取任务的方式不通（下面会进行说明）。
+3. 执行周期任务后，增加了额外的处理。
+
+### ScheduledThreadPoolExecutor 的实现
+
+前面我们提到过，ScheduledThreadPoolExecutor 会把待调度的任务（ScheduledFutureTask）放到一个 DelayQueue 中。
+
+ScheduledFutureTask 主要包含 3 个成员变量，如下：
+
++ long 型成员变量 time，表示这个任务将要被执行的具体时间。
++ long 型成员变量 sequenceNumber，表示这个任务将被添加到 ScheduledThreadPoolExecutor 中的序号。
++ long 型成员变量 period，表示任务执行的间隔周期。
+
+```java
+ /** Sequence number to break ties FIFO */
+private final long sequenceNumber;
+
+/** The time the task is enabled to execute in nanoTime units */
+private long time;
+
+/**
+ * Period in nanoseconds for repeating tasks.  A positive
+ * value indicates fixed-rate execution.  A negative value
+ * indicates fixed-delay execution.  A value of 0 indicates a
+ * non-repeating task.
+ */
+private final long period;
+```
+
+DelayQueue 封装了一个 PriorityQueue，这个 PriorityQueue 会对队列中的 ScheduledFutureTask 进行排序。排序时，time 小的排在前面（时间早的任务先被执行）。如果两个 ScheduledFutureTask 的 time 相同，就比较 sequenceNumber，sequenceNumber 小的排在前面（也就是说，如果两个任务的执行时间相同，那么先提交的任务将被先执行）。
+
+首先，让我们看看 ScheduledThreadPoolExecutor 中的线程执行周期任务的过程。下图时 ScheduledThreadPoolExecutor 中的线程 1 执行某个周期任务的 4 个步骤。
+
+![](http://img.mcwebsite.top/20190911234326.png)
+
+下面时对这 4 个步骤的说明：
+
+1. 线程1 从 DelayQueue 中获取以到期 ScheduledFutureTask（DelayQueue take())。到期任务时指 ScheduledFutureTask 的 time 大于等于当前时间。
+2. 线程1 执行这个 ScheduledFutureTask。
+3. 线程1 修改 ScheduledFutureTask 的 time 变量为下次将要被执行的时间。
+4. 线程1 把这个修改 time 之后的 ScheduledFutureTask 放回 DelayQueue 中（DelayQueue.add()）。

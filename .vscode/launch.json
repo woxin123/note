@@ -1,0 +1,11 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "CodeLens (Launch) - ScheduledThreadPoolExecutorExample",
+            "request": "launch",
+            "mainClass": "ScheduledThreadPoolExecutorExample",
+            "projectName": "note_8f8e6ca1"
+        }
+    ]
+}
