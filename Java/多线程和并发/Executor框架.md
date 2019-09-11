@@ -175,3 +175,42 @@ FixedThreadPool 使用无界队列 LinkedBlockingQueue 作为线程池的工作�
 2. 由于 1，使用无界队列时 maximumPoolSize 将是一个无效的参数。
 3. 由于 1 和 2，使用无界队列是 keepAliveTime 将时一个无效参数。
 4. 由于使用无界队列，运行中的 FixedThreadPool（未执行 shutdown() 或 shutdownNow()）不会拒绝任务（不会调用 RejectedExecutionHandler.rejectedExecution 方法）。
+
+#### 2. SingleThreadExecutor 详解
+
+SingleThreadExecutor 是使用单个 worker 线程的 Executor。下面是 SingleThreadPoolExecutor 的代码实现。
+
+```java
+public static ExecutorService newSingleThreadExecutor() {
+    return new FinalizableDelegatedExecutorService（new ThreadPoolExecutor(1, 1, OL, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>()));
+}
+```
+
+SingleThreadExecutor 的 corePoolSize 和 maximumPoolSize 被设置为 1，其他参数与 FixedThreadPool 相同。SingleThreadExecutor 使用无界队列 LinkedBlockingQueue 作为线程池的工作队列（队列的容量为 Integer.MAX_VALUE）。SingleThreadExecutor 使用无界队列作为工作队列对线程池带来的影响与 FixedThreadPool 相同，这里就不赘述了。
+
+SingleThreadExecutor 的运行示意图如下图所示：
+
+![](http://img.mcwebsite.top/20190911112557.png)
+
+1, 如果当前运行的线程数量少于 corePoolSize（即当前线程中无运行的线程），则创建一个新的线程来执行任务。
+2. 在线程池完成预热之后（当前线程池中只有一个线程），将任务加入 LinkedBlockingQueue 中。
+3. 线程执行完 1 中的任务后，会在一个无线循环中反复从 LinkedBlockingQueue 获取任务来执行。
+
+#### 3. CachedThreadPool 详解
+
+CachedThreadPool 是一个会根据需要创建新线程的线程池。下面时创建 CahcedThreadPool 的源代码。
+
+```java
+public static ExecuteService newCahcedThreadPool() {
+    return new ThreadPoolExecute(0, Integer.MAX_VALUE, 60L, TimeUnit.SECONDS,
+    new SynchronousQueue<Runnable>());
+}
+```
+
+CachedThreadPool 的 corePoolSize 被设置为 0，即 corePool 为空；maximumPoolSize 被设置为 Integer.MAX_VALUE，即 maximumPool 是无界的。这里把 keepAliveTime 设置为 60L ，意味着 CachedThreadPool 中的空闲线程等待新任务的最长时间为 60 秒，空闲线程超过 60 秒后会被终止。
+
+FixedThreadPool 和 SingleThreadExecutor 使用无界队列 LinkedBlockingQueue 作为线程池的工作队列。CachedThreadPool 使用没有容量的 SynchronousQueue 作为线程池的工作队列，但 CachedThreadPool 的 maximumPool 是无界的。这意味着，如果主线程提交任务的速度高于 maximumPool 中线程处理任务的速度时，CachedThreadPool 会不断创建新的线程。极端情况下，CachedThreadPool 会因为线程创建过多而耗尽 CPU 和内存资源。
+
+CachedThreadPool 的 execute() 方法的执行示意图如下图所示：
+
+![](http://img.mcwebsite.top/20190911140506.png)
