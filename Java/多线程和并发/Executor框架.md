@@ -279,3 +279,97 @@ DelayQueue 封装了一个 PriorityQueue，这个 PriorityQueue 会对队列中�
 2. 线程1 执行这个 ScheduledFutureTask。
 3. 线程1 修改 ScheduledFutureTask 的 time 变量为下次将要被执行的时间。
 4. 线程1 把这个修改 time 之后的 ScheduledFutureTask 放回 DelayQueue 中（DelayQueue.add()）。
+
+接下来，让我们看看上面的步骤 1 获取任务的过程。下面时 DelayQueue.take() 方法的源码实现。
+
+```java
+public E take() throws InterruptedException {
+    final ReentrantLock lock = this.lock;
+    lock.lockInterruptibly();
+    try {
+        for (;;) {
+            // 从 PriorityQueue<E> 里面获取等待时间最小的元素
+            E first = q.peek();
+            // 如果获取到的是 null，则等待
+            if (first == null)
+                available.await();
+            else {
+                // 获取延迟的时间
+                long delay = first.getDelay(NANOSECONDS);
+                if (delay <= 0)
+                    // 如果小于 0，这里返回
+                    return q.poll();
+                first = null; // don't retain ref while waiting
+                // 如果 leader != null，说明此时有其他线程正在等待获取，那么当前线程等待
+                if (leader != null)
+                    available.await();
+                else {
+                    // 如果 leader == null，那么说明只有当前线程在等待获取元素
+                    // 那么将 leader 设置为当前线程
+                    Thread thisThread = Thread.currentThread();
+                    leader = thisThread;
+                    try {
+                        // 等待
+                        available.awaitNanos(delay);
+                    } finally {
+                        // 最后将 leader 置空
+                        if (leader == thisThread)
+                            leader = null;
+                    }
+                }
+            }
+        }
+    } finally {
+        // 如果没有线程在等待获取并且当前队列中有元素存在，那么调用 avialable.singal() 唤醒一个正在等待的线程
+        if (leader == null && q.peek() != null)
+            available.signal();
+        // 解锁
+        lock.unlock();
+    }
+}
+```
+
+获取任务分为 3 大步骤：
+
+1. 获取 Lock。
+2. 获取周期任务。
+
+    1. 如果 PriorityQueue 为空，当前线程在 Condition 中等待，否则执行 2.1。
+    2. 如果 PriotityQueue 的头元素的等待时间小于 0，然后 返回PriorityQueue 中的头元素。如果 等待时间大于 0 ，进入 2.3。
+    3. 判断 leader 是否为空，leader 指的是当前正在等待获取头元素的，如果不为空证明有其他线程正在等待获取，那么就等待在 available 的 Condition 上。（注意：这里时一直等待）。如果 leader 为空，那么执行 2.4 。
+    4. 如果 leader 为空，那么将 leader 指向当前线程的 Thread。然后等待 PriotityQueue 头元素的需要等待的时间。当等待够那么长时间或者被唤醒时，将 leader 置空，重新开始执行 2.1 。
+    5. 在释放锁之前判断如果当前没有线程在等待获取元素也就是 leader == null 并且当前的 PriotityQueue 中有元素，那么就唤醒当前正在等待的线程。
+3. 释放锁。
+
+ScheduledThreadPoolExecutor 在一个循环中一直执行步骤 2 ，直到线程从 PriorityQueue 中取到一个元素后，才会退出循环。
+
+最后，让我们看看 ScheduledThreadPoolExecutor 中的线程执行任务的步骤 4 ，把 ScheduledFutureTask 放入 DelayQueue 中的过程，下面是 DelayQueue.add() 的源码实现。
+
+```java
+public boolean offer(E e) {
+    final ReentrantLock lock = this.lock;
+    // 加锁
+    lock.lock();
+    try {
+        // 添加任务到 PriorityQueue 中
+        q.offer(e);
+        // 如果当前添加的时等待时间最小的任务
+        if (q.peek() == e) {
+            leader = null;
+            // 从 avaiable 等待队列中唤醒一个
+            available.signal();
+        }
+        return true;
+    } finally {
+        lock.unlock();
+    }
+}
+```
+
+添加任务分三个步骤：
+
+1. 获取 Lock。
+2. 添加任务。
+    1. 向 PriorityQueue 中添加任务。
+    2. 如果在上面 2.1 中添加的任务是 PriorityQueue 的头元素，唤醒在 Condition 中等待的所有线程。
+3. 释放线程。

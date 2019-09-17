@@ -3,6 +3,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.Period;
 import java.util.Date;
+import java.util.concurrent.DelayQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -17,7 +18,7 @@ import java.util.concurrent.TimeUnit;
 public class ScheduledThreadPoolExecutorExample {
 
     public static void main(String[] args) throws Exception {
-
+        DelayQueue
         ScheduledExecutorService scheduledExecutor = Executors.newScheduledThreadPool(10);
         Instant start = Instant.now();
         System.out.println("开始时间：" + start);
