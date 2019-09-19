@@ -2,6 +2,13 @@
     "configurations": [
         {
             "type": "java",
+            "name": "CodeLens (Launch) - Subsets",
+            "request": "launch",
+            "mainClass": "Subsets",
+            "projectName": "note_8f8e6ca1"
+        },
+        {
+            "type": "java",
             "name": "CodeLens (Launch) - ScheduledThreadPoolExecutorExample",
             "request": "launch",
             "mainClass": "ScheduledThreadPoolExecutorExample",
