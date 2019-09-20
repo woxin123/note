@@ -24,6 +24,7 @@ TODO
 2. atomic 包下的源码分析：TODO。
 3. AQS 原理源码分析：TODO。
 4. ReentrantLock 源码分析：[ReentrantLock 源码分析](ReentrantLock源码分析.md)。
+5. RenntrantLock 和 synchronized 的区别：[ReentrantLock 和 synchronized 的区别](ReentrantLock和synchronized的区别.md)。
 5. ReentrantReadWriteLock 源码分析：[ReentrantReadWriteLock 源码分析](ReentrantReadWriteLock源码分析.md)。TODO
 6. 。。。
 7. Timer类源码分析：[Timer 源码分析](Timer类源码分析.md)。
