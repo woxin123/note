@@ -1,5 +1,14 @@
 # ReentrantLock 和 synchronized 的异同
 
+<!-- TOC -->
+
+- [ReentrantLock 和 synchronized 的异同](#reentrantlock和synchronized的异同)
+    - [相同点](#相同点)
+    - [区别1: 实现的层面不同](#区别1实现的层面不同)
+    - [区别2：ReentrantLock 中支持的而 synchronized 中不支持的功能](#区别2：reentrantlock中支持的而synchronized中不支持的功能)
+
+<!-- /TOC -->
+
 ## 相同点
 
 1. 都具有互斥重入的功能。
