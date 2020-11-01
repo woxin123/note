@@ -209,7 +209,7 @@ func (b *BlockingQueue) Take() interface{} {
 
 ### slice 的底层原理，扩容机制
 
-golang 中的 slice 数据类型，是利用指针指向某个连续片段的数组。一个 `slice` 在 golang 中占用 24 个 bytes。
+golang 中的 slice 数据类型，是利用指针指向某个连续片段的数组。Golang 中的 int 类型的变量占用的空间和 CPU 有关，这里假设 int 占用 8 bytes，那么 `slice` 所占用的空间将是 32 bytes。
 
 在 runtime 的 slice.go 中，定义了 slice 的 struct。
 
